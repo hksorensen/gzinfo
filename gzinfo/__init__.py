@@ -13,14 +13,20 @@ class GzInfo(object):
     last_mtime: int
 
 
-def read_gz_info(filename: str) -> Optional[GzInfo]:
+def read_gz_info(filename: str=None, fileobj=None, default_filename: str=None) -> Optional[GzInfo]:
     """Reading headers of GzipFile and returning fname."""
-    _gz = gzip.GzipFile(filename)
-    _fp = _gz.fileobj
+    if filename:
+        _gz = gzip.GzipFile(filename)
+        _fp = _gz.fileobj
+    elif fileobj:
+        _fp = fileobj
+    else:
+        raise NotImplementedError('Either filename or fileobj must be supplied')
 
     # the magic 2 bytes: if 0x1f 0x8b (037 213 in octal)
     magic = _fp.read(2)
     if magic == b'':
+        _fp.seek(0)
         return None
 
     if magic != b'\037\213':
@@ -33,7 +39,11 @@ def read_gz_info(filename: str) -> Optional[GzInfo]:
     # Case where the name is not in the header according to flag
     if not flag & gzip.FNAME:
         # Not stored in the header, use the filename sans .gz
-        fname = _fp.name
+        if hasattr(_fp, 'name'):
+            fname = _fp.name
+        else:
+            fname = default_filename
+        _fp.seek(0)
         return GzInfo(
             fname=fname[:-3] if fname.endswith('.gzip') else fname,
             method=method,
@@ -55,6 +65,7 @@ def read_gz_info(filename: str) -> Optional[GzInfo]:
             if not s or s == b'\000':
                 break
             _fname.append(s)
+        _fp.seek(0)
         return GzInfo(
             fname=''.join([s.decode('latin1') for s in _fname]),
             method=method,

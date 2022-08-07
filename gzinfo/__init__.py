@@ -13,10 +13,17 @@ class GzInfo(object):
     last_mtime: int
 
 
-def read_gz_info(filename: str) -> Optional[GzInfo]:
+def read_gz_info(filename: str=None, fileobj: gzip.GzipFile=None) -> Optional[GzInfo]:
     """Reading headers of GzipFile and returning fname."""
-    _gz = gzip.GzipFile(filename)
-    _fp = _gz.fileobj
+    if filename is None and fileobj is None:
+        raise ValueError(f'Either filename or fileobj must be supplied.')
+    if filename is not None:
+        _gz = gzip.GzipFile(filename)
+        _fp = _gz.fileobj
+    elif fileobj is not None:
+        _fp = fileobj
+    else:
+        raise ValueError(f'Either filename or fileobj must be supplied.')
 
     # the magic 2 bytes: if 0x1f 0x8b (037 213 in octal)
     magic = _fp.read(2)
